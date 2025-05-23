@@ -56,10 +56,23 @@ for a in range(len(folder_list)):
     
     data_windowed = data[peak_loc[0]-window:peak_loc[0]+window,peak_loc[1]-window:peak_loc[1]+window]
 
-    xfit_xcut = 1* xlab[peak_loc[1]-window:peak_loc[1]+window]
+    if peak_loc[1]-window < 0:
+        xfit_xcut = 1* xlab[0:peak_loc[1]+window]
+    
+    else:
+        xfit_xcut = 1* xlab[peak_loc[1]-window:peak_loc[1]+window]
+
     yfit_xcut = data[peak_loc[0]-window:peak_loc[0]+window,peak_loc[1]]
+
+    if yfit_xcut.shape > xfit_xcut.shape :
+        yfit_xcut = np.delete(yfit_xcut,0)
+
+    #xfit_xcut = 1* xlab[peak_loc[1]-window:peak_loc[1]+window]
+    #yfit_xcut = data[peak_loc[0]-window:peak_loc[0]+window,peak_loc[1]]
     
     Xmodel  = GaussianModel()
     params = Xmodel.guess(yfit_xcut, xfit_xcut)
     Xresult = Xmodel.fit(yfit_xcut, params,x = xfit_xcut)
-    Xresult.params('center')
+    #print(Xresult.params['center'].value)
+
+print('done')
