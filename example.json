@@ -1,0 +1,25 @@
+{
+    "runNumber":"",
+    "anode":"",
+    "operationMode":"",
+    "temperature":"",
+    "sweepType":"",
+    "comandPosition":{
+        "x":"",
+        "y":""
+    },
+    "fitX":{
+        "center":"",
+        "fwhm":"",
+        "sigma":"",
+        "height":"",
+        "amplitude":""
+    },
+    "fitY":{
+        "center":"",
+        "fwhm":"",
+        "sigma":"",
+        "height":"",
+        "amplitude":""
+    }
+}
