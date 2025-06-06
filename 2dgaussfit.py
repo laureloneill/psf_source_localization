@@ -7,7 +7,7 @@ import sys, getopt,os
 
 
 
-def fit_rotated_2d_gaussian(data, x=None, y=None, plot_result=False):
+def fit_rotated_2d_gaussian(data, x=None, y=None, plot_result=False,iter = None):
     """
     Fit a rotated 2D Gaussian to 2D data using Astropy's Gaussian2D model.
 
@@ -35,11 +35,14 @@ def fit_rotated_2d_gaussian(data, x=None, y=None, plot_result=False):
 
     # Initial guess for model
     gauss_init = models.Gaussian2D(amplitude=amplitude_init, x_mean=x_mean_init,
-                                   y_mean=y_mean_init, x_stddev=5, y_stddev=5, theta=0)
+                                   y_mean=y_mean_init, x_stddev=0.089, y_stddev=0.069, theta=0)
 
     # Fitting with Levenberg-Marquardt algorithm
     fitter = fitting.LevMarLSQFitter()
     fitted_model = fitter(gauss_init, x, y, data)
+    covariance_matrix = fitter.fit_info['param_cov']
+    if fitted_model.x_fwhm > 1 or fitted_model.y_fwhm >1 :
+        print(iter)
 
     if plot_result:
         fit_data = fitted_model(x, y)
@@ -51,7 +54,7 @@ def fit_rotated_2d_gaussian(data, x=None, y=None, plot_result=False):
         plt.tight_layout()
         plt.show()
 
-    return fitted_model
+    return fitted_model,covariance_matrix
 
 ############################################################################################
 
@@ -78,59 +81,104 @@ yMean =[None]*len(folder_list)
 xSigma = [None]*len(folder_list)
 ySigma = [None]*len(folder_list)
 Amplitude = [None]*len(folder_list)
+cov = [None]*len(folder_list)
+validPeak = [None]*len(folder_list)
 
 
-window = 100 #  number of pixels to either side of the peak
+window =10 #  number of pixels to either side of the peak
 imPixelSizeX = 0.0149 # pixel size degrees
 imPixelSizeY = 0.0149 # pixel size degrees
 
 for a in range(len(folder_list)): 
-    run[a], anode[a], detectorMode[a], temp[a], sweep[a], vTheta[a], hTheta[a] =  folder_list[a].split('_')
-    vTheta[a] = vTheta[a].replace('N','-')
-    hTheta[a] = hTheta[a].replace("N","-")
-    
-    data_path = Path(f"c:/Users/ajo5182/Documents/astro/y2024-12-09/{folder_list[a]}/Analysis/imaging_analysis_20241213/image_reconstruction.fits.gz")
-    d = fits.open(data_path) # open fits file
-    data = d[0].data # data contents of the fits file
-    shape =  data.shape
-    
-    y = imPixelSizeY * np.linspace((shape[0]-1)/-2,(shape[0]-1)/2, shape[0]) # create array from -23 deg to 23 deg, centered on zero
-    x = imPixelSizeX * np.linspace((shape[1]-1)/-2,(shape[1]-1)/2, shape[1]) # create array from -41 deg to 41 deg, centered on zero
+    numTerms = len(folder_list[a].split('_'))
+    if numTerms == 7:
+        run[a], anode[a], detectorMode[a], temp[a], sweep[a], vTheta[a], hTheta[a] =  folder_list[a].split('_')
+    #    vTheta[a] = vTheta[a].replace('N','-')
+    #    hTheta[a] = hTheta[a].replace("N","-")
+    elif numTerms == 6:
+        run[a], anode[a], detectorMode[a], temp[a], sweep[a], vTheta[a] = folder_list[a].split('_')
+        vTheta[a] = 'NA'
+        hTheta[a] = 'NA'
+    elif numTerms == 4:
+        run[a], anode[a], detectorMode[a], temp[a] = folder_list[a].split('_') 
+    elif numTerms == 3:
+        run[a],vTheta[a], hTheta[a] = folder_list[a].split('_')  
 
-    peak = np.max(data)
-    peak_loc = np.unravel_index(np.argmax(data),data.shape)
+    if os.path.isfile(f"{data_dir}/{folder_list[a]}/Analysis/imaging_analysis_20241213/Figures/imaging_source.png"):
     
-    if peak_loc[1]-window < 0:
-        x_window = 1* x[0:peak_loc[1]+window]
+        data_path = Path(f"{data_dir}/{folder_list[a]}/Analysis/imaging_analysis_20241213/image_reconstruction.fits.gz")
+        try:
+            d = fits.open(data_path) # open fits file
+        
+            data = d[0].data # data contents of the fits file
+            shape =  data.shape
     
+            y = imPixelSizeY * np.linspace((shape[0]-1)/-2,(shape[0]-1)/2, shape[0]) # create array from -23 deg to 23 deg, centered on zero
+            x = imPixelSizeX * np.linspace((shape[1]-1)/-2,(shape[1]-1)/2, shape[1]) # create array from -41 deg to 41 deg, centered on zero
+
+            peak = np.max(data)
+            peak_loc = np.unravel_index(np.argmax(data),data.shape)
+
+            x_window =x[peak_loc[1]-window:peak_loc[1]+window]
+            y_window =y [peak_loc[0]-window:peak_loc[0]+window]
+            X,Y = np.meshgrid(x[peak_loc[1]-window:peak_loc[1]+window],y[peak_loc[0]-window:peak_loc[0]+window])
+            windowed_data = data[peak_loc[0]-window:peak_loc[0]+window, peak_loc[1]-window:peak_loc[1]+window]
+            
+            '''
+            if peak_loc[0]-window < 0:
+                x_window = 1* x[0:peak_loc[0]+window]
+            else:
+                x_window = 1* x[peak_loc[0]-window:peak_loc[0]+window]
+            if peak_loc[1]-window < 0:
+                y_window = 1* x[0:peak_loc[1]+window]
+            else:
+                y_window = 1* x[peak_loc[1]-window:peak_loc[1]+window]
+
+            #y_window =y[peak_loc[0]-window:peak_loc[0]+window]
+    
+            if y_window.shape < x_window.shape :
+                x_window = np.delete(x_window,0)
+
+            X,Y = np.meshgrid(x_window,y_window)
+
+            #windowed_data = data[x_window, y_window]
+            if peak_loc[1]-window < 0:
+                lefty = 0
+            else:
+                lefty = peak_loc[1]-window
+
+            windowed_data = data[peak_loc[0]-window:peak_loc[0]+window, lefty:peak_loc[1]+window]
+            '''
+            #plt.contourf(X, Y, windowed_data, cmap=plt.cm.gist_earth_r)
+    
+            fitted,covariance_matrix = fit_rotated_2d_gaussian(windowed_data, -X, Y, plot_result=False,iter=folder_list[a])
+
+            validPeak[a] = True
+            xMean[a] = fitted.x_mean.value
+            yMean[a] = fitted.y_mean.value
+            xSigma[a] = fitted.x_stddev.value
+            ySigma[a] = fitted.y_stddev.value
+            Amplitude[a] = fitted.amplitude.value
+            theta[a] =fitted.theta.value
+            cov[a] = covariance_matrix
+            runout = run[a]+anode[a]+detectorMode[a]+sweep[a]+hTheta[a]+vTheta[a]
+        except:
+            validPeak[a] = "corrupt Fits"
     else:
-        x_window = 1* x[peak_loc[1]-window:peak_loc[1]+window]
+        validPeak[a] = False  
+  
 
-
-    y_window =y[peak_loc[0]-window:peak_loc[0]+window]
-    
-    if y_window.shape > x_window.shape :
-        y_window = np.delete(y_window,0)
-
-    X,Y = np.meshgrid(x_window,y_window)
-    windowed_data = data[peak_loc[0]-window:peak_loc[0]+window, peak_loc[1]-window:peak_loc[1]+window]
-
-    plt.contourf(X, Y, windowed_data, cmap=plt.cm.gist_earth_r)
-
-    fitted = fit_rotated_2d_gaussian(windowed_data, X, Y, plot_result=False)
-
-    xMean[a] = fitted.x_mean.value
-    yMean[a] = fitted.y_mean.value
-    xSigma[a] = fitted.x_stddev.value
-    ySigma[a] = fitted.y_stddev.value
-    Amplitude[a] = fitted.amplitude.value
-    theta[a] =fitted.theta.value
-
-np.savez("2dfit",run, anode, detectorMode, temp, sweep, hTheta, vTheta, xMean, xSigma, yMean, ySigma, Amplitude, theta)
+np.savez("data/2dfit_2024_12_17",run=run, anode=anode, detectorMode=detectorMode, temp=temp, 
+         sweep=sweep, hTheta=hTheta, vTheta=vTheta, 
+         xMean=xMean, xSigma=xSigma, 
+         yMean=yMean, ySigma=ySigma,
+         Amplitude=Amplitude, theta=theta,
+         validPeak=validPeak)
+np.savez("data/covMatrix_2024_12_17", np.array(cov, dtype=object),allow_pickle = True)
 
     
 
 
    
-
+print('\a')
 print('done')

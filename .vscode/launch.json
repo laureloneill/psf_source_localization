@@ -22,15 +22,36 @@
             "console": "integratedTerminal",
             "justMyCode": false,
         },
-        {    "name": "2dgaussfit",
+        {   "name": "2dgaussfit",
             "type": "debugpy",//debugpy 
             "request": "launch",
             "program": "2dgaussfit.py",
          
-            "args": [ "C:/Users/ajo5182/Documents/astro/psf/psf_source_localization/data"
+            "args": [ "C:/Users/ajo5182/Documents/astro/y2024-12-10"
                     ],
             "console": "integratedTerminal",
             "justMyCode": false,
+        },
+        {   "name": "2dgaussfit_2024_12_17",
+            "type": "debugpy",//debugpy 
+            "request": "launch",
+            "program": "2dgaussfit.py",
+         
+            "args": [ "Z:/Astro_BlackCAT/BlackCAT_Calibration_Data/LC_Calibration_Data/y2024-12-17"
+                    ],
+            "console": "integratedTerminal",
+            "justMyCode": false,
+        },
+        {   "name": "datview",
+            "type": "debugpy",//debugpy 
+            "request": "launch",
+            "program": "datview.py",
+         
+            //"args": [ "Z:/Astro_BlackCAT/BlackCAT_Calibration_Data/LC_Calibration_Data/y2024-12-09"
+              //      ],
+            "console": "integratedTerminal",
+            "justMyCode": false,
         }
+
     ]
 }
