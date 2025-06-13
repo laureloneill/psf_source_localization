@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from astropy.io import fits
 import sys, getopt,os
+import scipy.stats as stats
+
 
 
 
@@ -83,7 +85,7 @@ ySigma = [None]*len(folder_list)
 Amplitude = [None]*len(folder_list)
 cov = [None]*len(folder_list)
 validPeak = [None]*len(folder_list)
-
+pval = [np.nan]*len(folder_list)
 
 window =10 #  number of pixels to either side of the peak
 imPixelSizeX = 0.0149 # pixel size degrees
@@ -124,6 +126,9 @@ for a in range(len(folder_list)):
             X,Y = np.meshgrid(x[peak_loc[1]-window:peak_loc[1]+window],y[peak_loc[0]-window:peak_loc[0]+window])
             windowed_data = data[peak_loc[0]-window:peak_loc[0]+window, peak_loc[1]-window:peak_loc[1]+window]
             
+            shapiro_result = stats.shapiro(windowed_data, axis=0)
+            pval[a] = np.mean(shapiro_result.pvalue)
+
             '''
             if peak_loc[0]-window < 0:
                 x_window = 1* x[0:peak_loc[0]+window]
@@ -168,13 +173,14 @@ for a in range(len(folder_list)):
         validPeak[a] = False  
   
 
-np.savez("data/2dfit_2024_12_17",run=run, anode=anode, detectorMode=detectorMode, temp=temp, 
+np.savez("data/test",run=run, anode=anode, detectorMode=detectorMode, temp=temp, 
          sweep=sweep, hTheta=hTheta, vTheta=vTheta, 
          xMean=xMean, xSigma=xSigma, 
          yMean=yMean, ySigma=ySigma,
          Amplitude=Amplitude, theta=theta,
          validPeak=validPeak)
-np.savez("data/covMatrix_2024_12_17", np.array(cov, dtype=object),allow_pickle = True)
+np.savez("data/testcov", np.array(cov, dtype=object),allow_pickle = True)
+np.savez("data/test_pval", pval = pval)
 
     
 

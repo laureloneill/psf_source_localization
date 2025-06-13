@@ -27,7 +27,7 @@
             "request": "launch",
             "program": "2dgaussfit.py",
          
-            "args": [ "C:/Users/ajo5182/Documents/astro/y2024-12-10"
+            "args": [ "C:/Users/ajo5182/Documents/astro/y2024-12-09"
                     ],
             "console": "integratedTerminal",
             "justMyCode": false,
