@@ -3,10 +3,18 @@ from astropy.modeling import models, fitting
 import matplotlib.pyplot as plt
 from pathlib import Path
 from astropy.io import fits
+from astropy.wcs import WCS
 import sys, getopt,os
 import scipy.stats as stats
+import json
 
+def get_peaksig_json(json_path):
+    with open(json_path, 'r') as file:
+        json_data = json.load(file)
+    
+    peaksig = json_data["peaksig"]
 
+    return peaksig
 
 
 def fit_rotated_2d_gaussian(data, x=None, y=None, plot_result=False,iter = None):
@@ -83,13 +91,12 @@ yMean =[None]*len(folder_list)
 xSigma = [None]*len(folder_list)
 ySigma = [None]*len(folder_list)
 Amplitude = [None]*len(folder_list)
+peakSig = [None]*len(folder_list)
 cov = [None]*len(folder_list)
 validPeak = [None]*len(folder_list)
 pval = [np.nan]*len(folder_list)
 
 window =10 #  number of pixels to either side of the peak
-imPixelSizeX = 0.0149 # pixel size degrees
-imPixelSizeY = 0.0149 # pixel size degrees
 
 for a in range(len(folder_list)): 
     numTerms = len(folder_list[a].split('_'))
@@ -113,11 +120,23 @@ for a in range(len(folder_list)):
             d = fits.open(data_path) # open fits file
         
             data = d[0].data # data contents of the fits file
-            shape =  data.shape
-    
-            y = imPixelSizeY * np.linspace((shape[0]-1)/-2,(shape[0]-1)/2, shape[0]) # create array from -23 deg to 23 deg, centered on zero
-            x = imPixelSizeX * np.linspace((shape[1]-1)/-2,(shape[1]-1)/2, shape[1]) # create array from -41 deg to 41 deg, centered on zero
+            #shape =  data.shape
 
+            ny, nx = data.shape
+            ym, xm = np.mgrid[:ny, :nx]
+
+            w = WCS(d[0].header)
+
+            x,y= w.array_index_to_world_values(ym,xm)
+            x = (x+(180+360)) % 360 -180
+
+
+
+
+    
+            #y = imPixelSizeY * np.linspace((shape[0]-1)/-2,(shape[0]-1)/2, shape[0]) # create array from -23 deg to 23 deg, centered on zero
+            #x = imPixelSizeX * np.linspace((shape[1]-1)/-2,(shape[1]-1)/2, shape[1]) # create array from -41 deg to 41 deg, centered on zero
+            '''
             peak = np.max(data)
             peak_loc = np.unravel_index(np.argmax(data),data.shape)
 
@@ -125,7 +144,16 @@ for a in range(len(folder_list)):
             y_window =y [peak_loc[0]-window:peak_loc[0]+window]
             X,Y = np.meshgrid(x[peak_loc[1]-window:peak_loc[1]+window],y[peak_loc[0]-window:peak_loc[0]+window])
             windowed_data = data[peak_loc[0]-window:peak_loc[0]+window, peak_loc[1]-window:peak_loc[1]+window]
+            '''
+            peak = np.max(data)
+            peak_loc = np.unravel_index(np.argmax(data),data.shape)
+            window = 10
+
+            windowed_data = data[peak_loc[0]-window:peak_loc[0]+window, peak_loc[1]-window:peak_loc[1]+window]
+            x_window = x[peak_loc[0]-window:peak_loc[0]+window, peak_loc[1]-window:peak_loc[1]+window]
+            y_window = y[peak_loc[0]-window:peak_loc[0]+window, peak_loc[1]-window:peak_loc[1]+window]
             
+
             shapiro_result = stats.shapiro(windowed_data, axis=0)
             pval[a] = np.mean(shapiro_result.pvalue)
 
@@ -156,7 +184,7 @@ for a in range(len(folder_list)):
             '''
             #plt.contourf(X, Y, windowed_data, cmap=plt.cm.gist_earth_r)
     
-            fitted,covariance_matrix = fit_rotated_2d_gaussian(windowed_data, -X, Y, plot_result=False,iter=folder_list[a])
+            fitted,covariance_matrix = fit_rotated_2d_gaussian(windowed_data, x_window, y_window, plot_result=False,iter=folder_list[a])
 
             validPeak[a] = True
             xMean[a] = fitted.x_mean.value
@@ -171,16 +199,22 @@ for a in range(len(folder_list)):
             validPeak[a] = "corrupt Fits"
     else:
         validPeak[a] = False  
-  
+    if os.path.isfile(f"{data_dir}/{folder_list[a]}/Analysis/imaging_analysis_20241213/analysis_results.json"):
+        json_path = Path(f"{data_dir}/{folder_list[a]}/Analysis/imaging_analysis_20241213/analysis_results.json")
+        try:
+            peakSig[a] = get_peaksig_json(json_path)
+        except:
+            print('no peak')
+    #print(a)
 
-np.savez("data/test",run=run, anode=anode, detectorMode=detectorMode, temp=temp, 
+np.savez("data/2dfit_2024_12_11",run=run, anode=anode, detectorMode=detectorMode, temp=temp, 
          sweep=sweep, hTheta=hTheta, vTheta=vTheta, 
          xMean=xMean, xSigma=xSigma, 
          yMean=yMean, ySigma=ySigma,
          Amplitude=Amplitude, theta=theta,
-         validPeak=validPeak)
-np.savez("data/testcov", np.array(cov, dtype=object),allow_pickle = True)
-np.savez("data/test_pval", pval = pval)
+         validPeak=validPeak,peakSig=peakSig)
+np.savez("data/covMatrix_2024_12_11", np.array(cov, dtype=object),allow_pickle = True)
+#np.savez("data/test_pval", pval = pval)
 
     
 
