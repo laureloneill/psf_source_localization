@@ -32,12 +32,12 @@
             "console": "integratedTerminal",
             "justMyCode": false,
         },
-        {   "name": "2dgaussfit_2024_12_11",
+        {   "name": "2dgaussfit_2024_12_17",
             "type": "debugpy",//debugpy 
             "request": "launch",
             "program": "2dgaussfit.py",
          
-            "args": [ "Z:/Astro_BlackCAT/BlackCAT_Calibration_Data/LC_Calibration_Data/y2024-12-11"
+            "args": [ "Z:/Astro_BlackCAT/BlackCAT_Calibration_Data/LC_Calibration_Data/y2024-12-17"
                     ],
             "console": "integratedTerminal",
             "justMyCode": false,

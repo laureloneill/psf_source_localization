@@ -7,6 +7,7 @@ from astropy.wcs import WCS
 import sys, getopt,os
 import scipy.stats as stats
 import json
+import chime
 
 def get_peaksig_json(json_path):
     with open(json_path, 'r') as file:
@@ -207,18 +208,18 @@ for a in range(len(folder_list)):
             print('no peak')
     #print(a)
 
-np.savez("data/2dfit_2024_12_11",run=run, anode=anode, detectorMode=detectorMode, temp=temp, 
+np.savez("data/2dfit_2024_12_17",run=run, anode=anode, detectorMode=detectorMode, temp=temp, 
          sweep=sweep, hTheta=hTheta, vTheta=vTheta, 
          xMean=xMean, xSigma=xSigma, 
          yMean=yMean, ySigma=ySigma,
          Amplitude=Amplitude, theta=theta,
          validPeak=validPeak,peakSig=peakSig)
-np.savez("data/covMatrix_2024_12_11", np.array(cov, dtype=object),allow_pickle = True)
+np.savez("data/covMatrix_2024_12_17", np.array(cov, dtype=object),allow_pickle = True)
 #np.savez("data/test_pval", pval = pval)
 
     
 
 
    
-print('\a')
+chime.success()
 print('done')
