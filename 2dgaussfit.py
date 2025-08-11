@@ -185,7 +185,7 @@ for a in range(len(folder_list)):
             '''
             #plt.contourf(X, Y, windowed_data, cmap=plt.cm.gist_earth_r)
     
-            fitted,covariance_matrix = fit_rotated_2d_gaussian(windowed_data, x_window, y_window, plot_result=False,iter=folder_list[a])
+            fitted,covariance_matrix = fit_rotated_2d_gaussian(windowed_data, x_window, y_window, plot_result=True,iter=folder_list[a])
 
             validPeak[a] = True
             xMean[a] = fitted.x_mean.value
@@ -208,13 +208,13 @@ for a in range(len(folder_list)):
             print('no peak')
     #print(a)
 
-np.savez("data/2dfit_2024_12_17",run=run, anode=anode, detectorMode=detectorMode, temp=temp, 
+np.savez("data/test",run=run, anode=anode, detectorMode=detectorMode, temp=temp, 
          sweep=sweep, hTheta=hTheta, vTheta=vTheta, 
          xMean=xMean, xSigma=xSigma, 
          yMean=yMean, ySigma=ySigma,
          Amplitude=Amplitude, theta=theta,
          validPeak=validPeak,peakSig=peakSig)
-np.savez("data/covMatrix_2024_12_17", np.array(cov, dtype=object),allow_pickle = True)
+np.savez("data/test_cov", np.array(cov, dtype=object),allow_pickle = True)
 #np.savez("data/test_pval", pval = pval)
 
     

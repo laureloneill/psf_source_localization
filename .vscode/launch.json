@@ -37,7 +37,7 @@
             "request": "launch",
             "program": "2dgaussfit.py",
          
-            "args": [ "Z:/Astro_BlackCAT/BlackCAT_Calibration_Data/LC_Calibration_Data/y2024-12-17"
+            "args": [ "Z:/Astro_BlackCAT/BlackCAT_Calibration_Data/LC_Calibration_Data/y2024-12-12"
                     ],
             "console": "integratedTerminal",
             "justMyCode": false,
@@ -51,7 +51,18 @@
               //      ],
             "console": "integratedTerminal",
             "justMyCode": false,
+        },
+        {   "name": "fitsutil",
+            "type": "debugpy",//debugpy 
+            "request": "launch",
+            "program": "fitsutil.py",
+         
+            //"args": [ "Z:/Astro_BlackCAT/BlackCAT_Calibration_Data/LC_Calibration_Data/y2024-12-09"
+              //      ],
+            "console": "integratedTerminal",
+            "justMyCode": false,
         }
+
 
     ]
 }
