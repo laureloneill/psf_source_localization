@@ -42,11 +42,16 @@ def evntlist_in_browser(event_list):
         event_data.show_in_browser()
 
 def random_sample_events_list(event_list, sampleNumber, seed, outname, save = True):
+    
+    # given an event list this returns an event list with containing a given number
+    # of subsamples from the event list
+    
     # event_list: string or path to the event list you want to sample
     # sampleNumber: number of samples from the event list you want
     # outname: name to save the sub-sampled event list too
     # seed: seed for the random number generator
     # save: to save the file to the location in outname
+    
     d = fits.open(event_list)
     data = d[1].data
     end = len(data)
@@ -58,3 +63,39 @@ def random_sample_events_list(event_list, sampleNumber, seed, outname, save = Tr
         d.writeto(outname)
     
     return d
+
+def subsample_eventlist(event_list, numberOfSamples, outname, outdir):
+    # function to take a large event list and split it into smaller event lists of a defined number events, and write that to a directory
+    # currently it saves it to a directory so that the current analysis pipeline for blackcat can be used, but you could just as easily output each list
+    #
+    # output is an eventlist with the name "outname{how many times it ran}.fits" in the directory specified in outdir
+
+    # event_list -> path the the event list you want to split
+    # numberOfSamples -> number of samples per new event list EG enter 50000 if you want 50000 events per file
+    # outname -> basename for the files you'll get out
+    # outdir -> directory that you will write the new fits files to, make sure it exists before you start the function
+
+    # TO DO:
+    #   1) have it create the directory if it doesn't exist already
+
+
+    outdir = Path(outdir)
+    if outdir.exists == False:
+        os.mkdir(outdir)
+
+    d = fits.open(event_list)
+    data = d[1].data
+    cols = d[1].columns
+    size = len(data)
+
+    subSampleHDU = fits.BinTableHDU.from_columns(cols)
+
+    for n in range(int(size/numberOfSamples)):
+        subSampleHDU.data = d[1].data[n*int(size/numberOfSamples):(n+1)*int(size/numberOfSamples)]
+        fitsName = Path(outname+str(n)+'.fits')
+
+        subSampleHDU.writeto(outdir/fitsName,overwrite=True)
+
+        
+
+
