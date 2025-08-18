@@ -64,21 +64,42 @@ def random_sample_events_list(event_list, sampleNumber, seed, outname, save = Tr
     
     return d
 
-def subsample_eventlist(event_list, numberOfSamples, outname, outdir):
-    # function to take a large event list and split it into smaller event lists of a defined number events, and write that to a directory
+def subsample_eventlist(data_dir, numberOfLists, outdir):
+    # function to take a large event list and split it into a defined number of snaller event lists, and write that to a directory
     # currently it saves it to a directory so that the current analysis pipeline for blackcat can be used, but you could just as easily output each list
     #
     # output is an eventlist with the name "outname{how many times it ran}.fits" in the directory specified in outdir
 
-    # event_list -> path the the event list you want to split
-    # numberOfSamples -> number of samples per new event list EG enter 50000 if you want 50000 events per file
-    # outname -> basename for the files you'll get out
+    # data_dir -> path the the event list collection you want to split
+    # numberOfLists -> number of subsets of the event list you want to make 
     # outdir -> directory that you will write the new fits files to, make sure it exists before you start the function
 
     # TO DO:
     #   1) have it create the directory if it doesn't exist already
 
 
+
+    file_list = [file for file in os.listdir(data_dir) if os.path.isfile(os.path.join(data_dir, file))] 
+
+    for a in range(len(file_list)):
+        d = fits.open(data_dir/Path(file_list[a]))
+        data = d[1].data 
+        cols = d[1].columns
+        size = len(data)
+        numberOfSamples = int(size/numberOfLists)
+        subSampleHDU = fits.BinTableHDU.from_columns(cols)
+        for n in range(numberOfLists):
+            subSampleHDU.data = d[1].data[n*numberOfSamples:(n+1)*numberOfSamples]
+            out = outdir/Path('subsample'+str(n))
+            if os.path.isdir((out)) == False:
+                os.mkdir(out)
+                #print('made the directory')
+            #else:
+            #    print("didn't make the directory")
+
+            subSampleHDU.writeto(out/Path(file_list[a]).with_suffix(''),overwrite=True)
+
+    '''
     outdir = Path(outdir)
     if outdir.exists == False:
         os.mkdir(outdir)
@@ -95,7 +116,7 @@ def subsample_eventlist(event_list, numberOfSamples, outname, outdir):
         fitsName = Path(outname+str(n)+'.fits')
 
         subSampleHDU.writeto(outdir/fitsName,overwrite=True)
-
+    '''
         
 
 
