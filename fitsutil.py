@@ -41,28 +41,39 @@ def evntlist_in_browser(event_list):
         event_data = Table(event_list[1].data)
         event_data.show_in_browser()
 
-def random_sample_events_list(event_list, sampleNumber, seed, outname, save = True):
+def random_sample_events_list(directory, sampleNumber, outdir, eventlist, save = True):
     
     # given an event list this returns an event list with containing a given number
     # of subsamples from the event list
     
     # event_list: string or path to the event list you want to sample
     # sampleNumber: number of samples from the event list you want
-    # outname: name to save the sub-sampled event list too
-    # seed: seed for the random number generator
-    # save: to save the file to the location in outname
+    # oudir: directory to save the subsample to
+    # eventlist: name to save the sub-sampled event list too
+    # 
+    # save: to save the file to the location in eventlist
     
-    d = fits.open(event_list)
+    directory = Path(directory)
+    d = fits.open(directory/Path(eventlist))
     data = d[1].data
-    end = len(data)
-    np.random.seed(seed)
-    sample_index = np.random.randint(0,end,sampleNumber)
-    d[1].data = d[1].data[sample_index]
-
-    if save == True: 
-        d.writeto(outname)
+    cols = d[1].columns
     
-    return d
+    end = len(data)
+    if sampleNumber > end:
+        sampleNumber = end
+        print("number of samples requested is greater than number of events")
+    population = range(0,end)
+    sample_index = np.random.choice(population, sampleNumber,replace = False)
+
+    subSampleHDU = fits.BinTableHDU.from_columns(cols)
+    subSampleHDU.data = d[1].data[sample_index]
+
+    if save == True:
+        if os.path.isdir(Path(outdir)) == False  :
+            os.makedirs(Path(outdir))
+        subSampleHDU.writeto(outdir/Path(eventlist),overwrite=True)
+    
+    return subSampleHDU
 
 def subsample_eventlist(data_dir, numberOfLists, outdir):
     # function to take a large event list and split it into a defined number of snaller event lists, and write that to a directory
@@ -92,12 +103,12 @@ def subsample_eventlist(data_dir, numberOfLists, outdir):
             subSampleHDU.data = d[1].data[n*numberOfSamples:(n+1)*numberOfSamples]
             out = outdir/Path('subsample'+str(n))
             if os.path.isdir((out)) == False:
-                os.mkdir(out)
+                os.makedirs(out)
                 #print('made the directory')
             #else:
             #    print("didn't make the directory")
 
-            subSampleHDU.writeto(out/Path(file_list[a]).with_suffix(''),overwrite=True)
+            subSampleHDU.writeto(out/Path(file_list[a]),overwrite=True)
 
     '''
     outdir = Path(outdir)
@@ -117,6 +128,10 @@ def subsample_eventlist(data_dir, numberOfLists, outdir):
 
         subSampleHDU.writeto(outdir/fitsName,overwrite=True)
     '''
-        
+
+def numEvents(dataPath):
+    d = fits.open(Path(dataPath))
+    size = len(d[1].data)
+    return size  
 
 

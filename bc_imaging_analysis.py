@@ -51,7 +51,7 @@ def imaging_analysis(
         )
         badpix_masks[sn] = np.asarray(bp,dtype=bool)
 
-    outname = "imaging_analysis_20241217"
+    outname = "imaging_analysis"
 
     th1_e = 200
     
