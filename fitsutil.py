@@ -4,6 +4,7 @@ from astropy.io import fits
 from astropy.table import Table
 import sys, getopt,os
 import numpy as np
+from xhcd.core import Spectrum
 
 
 #def fitsmove(rawFitsDirectory):
@@ -41,7 +42,7 @@ def evntlist_in_browser(event_list):
         event_data = Table(event_list[1].data)
         event_data.show_in_browser()
 
-def random_sample_events_list(directory, sampleNumber, outdir, eventlist, save = True):
+def random_sample_events_list(input, sampleNumber, outdir=None, eventlist=None, save = False):
     
     # given an event list this returns an event list with containing a given number
     # of subsamples from the event list
@@ -53,8 +54,12 @@ def random_sample_events_list(directory, sampleNumber, outdir, eventlist, save =
     # 
     # save: to save the file to the location in eventlist
     
-    directory = Path(directory)
-    d = fits.open(directory/Path(eventlist))
+    if type(input) == 'str':
+        directory = Path(input)
+        d = fits.open(directory/Path(eventlist))
+    else: 
+        d = input
+
     data = d[1].data
     cols = d[1].columns
     
@@ -134,4 +139,37 @@ def numEvents(dataPath):
     size = len(d[1].data)
     return size  
 
+def splitEventList(eventlistin,splitThreshold,parameter, save = False):
+    #if type(eventlistin) == 'pathlib.PosixPath' or 'pathlib.WindowsPath':
+    #    d = fits.open(eventlistin)
 
+    if type(eventlistin) == "str":
+        d = fits.open(Path(eventlistin))
+   
+    else:
+        d =  eventlistin
+    
+    cols = d[1].columns
+    aboveThreshold = fits.BinTableHDU.from_columns(cols)
+    belowThreshold = fits.BinTableHDU.from_columns(cols)
+    aboveThreshold.data = d[1].data[d[1].data[str(parameter)]>splitThreshold]
+    belowThreshold.data = d[1].data[d[1].data[str(parameter)]<splitThreshold]
+
+    return aboveThreshold, belowThreshold
+
+def halfEventList(eventListIn):
+    # splits an eventlist in half
+
+    if type(eventListIn)=="str":
+        d = fits.open(eventListIn)
+    else:
+        d = eventListIn
+    
+    middle =int(len(d[1]))
+    cols = d[1].columns
+    firstHalfDat = fits.BinTableHDU.from_columns(cols)
+    secondHalfDat = fits.BinTableHDU.from_columns(cols)
+
+    firstHalfDat.data = d[1].data[0:middle]
+    secondHalfDat.data = d[1].data[0:len(d[1])]
+    return firstHalfDat, secondHalfDat
