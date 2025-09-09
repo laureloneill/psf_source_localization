@@ -59,9 +59,12 @@ def random_sample_events_list(input, sampleNumber, outdir=None, eventlist=None, 
         d = fits.open(directory/Path(eventlist))
     else: 
         d = input
-
-    data = d[1].data
-    cols = d[1].columns
+    if type(d) == "astropy.io.fits.hdu.hdulist.HDUList":
+        data = d[1].data
+        cols = d[1].columns
+    else: 
+        data = d.data
+        cols = d.columns
     
     end = len(data)
     if sampleNumber > end:
@@ -71,7 +74,7 @@ def random_sample_events_list(input, sampleNumber, outdir=None, eventlist=None, 
     sample_index = np.random.choice(population, sampleNumber,replace = False)
 
     subSampleHDU = fits.BinTableHDU.from_columns(cols)
-    subSampleHDU.data = d[1].data[sample_index]
+    subSampleHDU.data = data[sample_index]
 
     if save == True:
         if os.path.isdir(Path(outdir)) == False  :
@@ -148,28 +151,51 @@ def splitEventList(eventlistin,splitThreshold,parameter, save = False):
    
     else:
         d =  eventlistin
-    
+    #if type(d) == 'astropy.io.fits.hdu.hdulist.HDUList':
     cols = d[1].columns
     aboveThreshold = fits.BinTableHDU.from_columns(cols)
     belowThreshold = fits.BinTableHDU.from_columns(cols)
     aboveThreshold.data = d[1].data[d[1].data[str(parameter)]>splitThreshold]
     belowThreshold.data = d[1].data[d[1].data[str(parameter)]<splitThreshold]
+    #else: 
+     #   cols = d.columns
+     #   aboveThreshold.data = d.data[d.data[str(parameter)]>splitThreshold]
+     #   belowThreshold.data = d.data[d.data[str(parameter)]<splitThreshold]
+   
+    aboveThreshold = fits.BinTableHDU.from_columns(cols)
+    belowThreshold = fits.BinTableHDU.from_columns(cols)
+    #aboveThreshold.data = d[1].data[d[1].data[str(parameter)]>splitThreshold]
+    #belowThreshold.data = d[1].data[d[1].data[str(parameter)]<splitThreshold]
 
     return aboveThreshold, belowThreshold
 
 def halfEventList(eventListIn):
     # splits an eventlist in half
+    # only accepts hdu list or path to one
 
     if type(eventListIn)=="str":
         d = fits.open(eventListIn)
     else:
         d = eventListIn
+    if type(d) == "astropy.io.fits.hdu.hdulist.HDUList":
+        middle =int(len(d[1]))
+        cols = d[1].columns
+        firstHalfDat = fits.BinTableHDU.from_columns(cols)
+        secondHalfDat = fits.BinTableHDU.from_columns(cols)
+        firstHalfDat.data = d[1].data[0:middle]
+        secondHalfDat.data = d[1].data[middle:len(d[1])]
+    else:
+        middle =int(len(d.data))
+        cols = d.columns
+        firstHalfDat = fits.BinTableHDU.from_columns(cols)
+        secondHalfDat = fits.BinTableHDU.from_columns(cols)
+        firstHalfDat.data = d.data[0:middle]
+        secondHalfDat.data = d.data[middle:len(d.data)]
     
-    middle =int(len(d[1]))
-    cols = d[1].columns
     firstHalfDat = fits.BinTableHDU.from_columns(cols)
     secondHalfDat = fits.BinTableHDU.from_columns(cols)
 
-    firstHalfDat.data = d[1].data[0:middle]
-    secondHalfDat.data = d[1].data[0:len(d[1])]
+    
+
+
     return firstHalfDat, secondHalfDat
