@@ -151,19 +151,20 @@ def splitEventList(eventlistin,splitThreshold,parameter, save = False):
    
     else:
         d =  eventlistin
-    #if type(d) == 'astropy.io.fits.hdu.hdulist.HDUList':
-    cols = d[1].columns
-    aboveThreshold = fits.BinTableHDU.from_columns(cols)
-    belowThreshold = fits.BinTableHDU.from_columns(cols)
-    aboveThreshold.data = d[1].data[d[1].data[str(parameter)]>splitThreshold]
-    belowThreshold.data = d[1].data[d[1].data[str(parameter)]<splitThreshold]
-    #else: 
-     #   cols = d.columns
-     #   aboveThreshold.data = d.data[d.data[str(parameter)]>splitThreshold]
-     #   belowThreshold.data = d.data[d.data[str(parameter)]<splitThreshold]
+    if isinstance(d,(fits.HDUList)):
+        cols = d[1].columns
+        aboveThreshold = fits.BinTableHDU.from_columns(cols)
+        belowThreshold = fits.BinTableHDU.from_columns(cols)
+        aboveThreshold.data = d[1].data[d[1].data[str(parameter)]>splitThreshold]
+        belowThreshold.data = d[1].data[d[1].data[str(parameter)]<splitThreshold]
+    elif isinstance(d,(fits.BinTableHDU)): 
+       cols = d.columns
+       aboveThreshold = fits.BinTableHDU.from_columns(cols)
+       belowThreshold = fits.BinTableHDU.from_columns(cols)
+       aboveThreshold.data = d.data[d.data[str(parameter)]>splitThreshold]
+       belowThreshold.data = d.data[d.data[str(parameter)]<splitThreshold]
    
-    aboveThreshold = fits.BinTableHDU.from_columns(cols)
-    belowThreshold = fits.BinTableHDU.from_columns(cols)
+    
     #aboveThreshold.data = d[1].data[d[1].data[str(parameter)]>splitThreshold]
     #belowThreshold.data = d[1].data[d[1].data[str(parameter)]<splitThreshold]
 
@@ -195,7 +196,32 @@ def halfEventList(eventListIn):
     firstHalfDat = fits.BinTableHDU.from_columns(cols)
     secondHalfDat = fits.BinTableHDU.from_columns(cols)
 
-    
-
-
     return firstHalfDat, secondHalfDat
+
+def splitSpectrumClass(eventlistin,splitThreshold, th1=200, th2 = 60, save = False):
+    d = Spectrum(eventlistin,th1=th1,th2 = th2)
+    belowThreshold = d.filterEvents(sumrange = [0,splitThreshold])
+    aboveThreshold = d.filterEvents(sumrange = [splitThreshold,3000])
+
+
+def binEvents(eventlist, binsize=1, binrange=[0,3000]):
+
+        assert len(binrange) == 2, "Binrange must be a min and max value"
+        assert (np.diff(binrange)[0]/binsize)==int(np.diff(binrange)[0]/binsize), "Binrange must be divisible by binsize"
+
+        bins = np.arange(binrange[0],binrange[1]+binsize,binsize,dtype=np.float32)
+
+        accuracy=len(str(float(binsize)).split('.')[1])
+
+        for i in range(len(bins)):
+            bins[i]=round(bins[i],accuracy)
+            if i >= 1:
+                if bins[i]==bins[i-1]:
+                    print('Rounding error, duplicate bins at '+str(bins[i]))
+
+        
+        event_vals = eventlist.data['sum']
+
+        [counts, bins] = np.histogram(event_vals, bins)
+
+        return [counts, bins]
