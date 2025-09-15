@@ -85,80 +85,82 @@ def distFromCentroid(observation,plotHist=False):
 def analyze_localization_directory(data_dir,window=10,plot = False ):
     data_dir = Path(data_dir)
     # take the names of all folders within the specified directory
-    folder_list = [folder for folder in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, folder))]
+    file_list = [file for file in os.listdir(data_dir) if os.path.isfile(os.path.join(data_dir, file))]
+    
+    theta = [None]*len(file_list)
+    xMean = [None]*len(file_list)
+    yMean =[None]*len(file_list)
+    xSigma = [None]*len(file_list)
+    ySigma = [None]*len(file_list)
+    Amplitude = [None]*len(file_list)
+    peakSig = [None]*len(file_list)
+    cov = [None]*len(file_list)
+    validPeak = [None]*len(file_list)
+    pval = [np.nan]*len(file_list) 
+    
 
-    theta = [None]*len(folder_list)
-    xMean = [None]*len(folder_list)
-    yMean =[None]*len(folder_list)
-    xSigma = [None]*len(folder_list)
-    ySigma = [None]*len(folder_list)
-    Amplitude = [None]*len(folder_list)
-    peakSig = [None]*len(folder_list)
-    cov = [None]*len(folder_list)
-    validPeak = [None]*len(folder_list)
-    pval = [np.nan]*len(folder_list) 
-
-    for a in range(len(folder_list)): 
+    for a in range(len(file_list)): 
         #
         #
-        # numTerms = len(folder_list[a].split('_'))
+        # numTerms = len(file_list[a].split('_'))
         #if numTerms == 7:
-        #    run[a], anode[a], detectorMode[a], temp[a], sweep[a], vTheta[a], hTheta[a] =  folder_list[a].split('_')
+        #    run[a], anode[a], detectorMode[a], temp[a], sweep[a], vTheta[a], hTheta[a] =  file_list[a].split('_')
 
         #elif numTerms == 6:
-        #    run[a], anode[a], detectorMode[a], temp[a], sweep[a], vTheta[a] = folder_list[a].split('_')
+        #    run[a], anode[a], detectorMode[a], temp[a], sweep[a], vTheta[a] = file_list[a].split('_')
         #    vTheta[a] = 'NA'
         #    hTheta[a] = 'NA'
         #elif numTerms == 4:
-        #    run[a], anode[a], detectorMode[a], temp[a] = folder_list[a].split('_') 
+        #    run[a], anode[a], detectorMode[a], temp[a] = file_list[a].split('_') 
         #elif numTerms == 3:
-        #    run[a],vTheta[a], hTheta[a] = folder_list[a].split('_')
+        #    run[a],vTheta[a], hTheta[a] = file_list[a].split('_')
         #
-        if os.path.isfile(f"{data_dir}/{folder_list[a]}/Analysis/imaging_analysis/Figures/imaging_source.png"):
-            data_path = Path(f"{data_dir}/{folder_list[a]}/Analysis/imaging_analysis/image_reconstruction.fits.gz")
-            try:
-                d = fits.open(data_path) # open fits file
+        if os.path.isfile(f"{data_dir}/{file_list[a]}"):
+            data_path = Path(f"{data_dir}/{file_list[a]}")
+        try:
+            d = fits.open(data_path) # open fits file
         
-                data = d[0].data # data contents of the fits file
+            data = d[0].data # data contents of the fits file
             #shape =  data.shape
 
-                ny, nx = data.shape
-                ym, xm = np.mgrid[:ny, :nx]
+            ny, nx = data.shape
+            ym, xm = np.mgrid[:ny, :nx]
 
-                w = WCS(d[0].header)
+            w = WCS(d[0].header)
 
-                x,y= w.array_index_to_world_values(ym,xm)
-                x = (x+(180+360)) % 360 -180
+            x,y= w.array_index_to_world_values(ym,xm)
+            x = (x+(180+360)) % 360 -180
 
-                peak = np.max(data)
-                peak_loc = np.unravel_index(np.argmax(data),data.shape)
-                window = 10
+            peak = np.max(data)
+            peak_loc = np.unravel_index(np.argmax(data),data.shape)
+            window = 10
 
-                windowed_data = data[peak_loc[0]-window:peak_loc[0]+window, peak_loc[1]-window:peak_loc[1]+window]
-                x_window = x[peak_loc[0]-window:peak_loc[0]+window, peak_loc[1]-window:peak_loc[1]+window]
-                y_window = y[peak_loc[0]-window:peak_loc[0]+window, peak_loc[1]-window:peak_loc[1]+window]
+            windowed_data = data[peak_loc[0]-window:peak_loc[0]+window, peak_loc[1]-window:peak_loc[1]+window]
+            x_window = x[peak_loc[0]-window:peak_loc[0]+window, peak_loc[1]-window:peak_loc[1]+window]
+            y_window = y[peak_loc[0]-window:peak_loc[0]+window, peak_loc[1]-window:peak_loc[1]+window]
 
-                fitted,covariance_matrix = fit_rotated_2d_gaussian(windowed_data, x_window, y_window, plot_result=plot,iter=folder_list[a])
+            fitted,covariance_matrix = fit_rotated_2d_gaussian(windowed_data, x_window, y_window, plot_result=plot,iter=file_list[a])
         
-                validPeak[a] = True
-                xMean[a] = fitted.x_mean.value
-                yMean[a] = fitted.y_mean.value
-                xSigma[a] = fitted.x_stddev.value
-                ySigma[a] = fitted.y_stddev.value
-                Amplitude[a] = fitted.amplitude.value
-                theta[a] =fitted.theta.value
-                cov[a] = covariance_matrix
-            except:
-                validPeak[a] = "corrupt Fits"
+            validPeak[a] = True
+            xMean[a] = fitted.x_mean.value
+            yMean[a] = fitted.y_mean.value
+            xSigma[a] = fitted.x_stddev.value
+            ySigma[a] = fitted.y_stddev.value
+            Amplitude[a] = fitted.amplitude.value
+            theta[a] =fitted.theta.value
+            cov[a] = covariance_matrix
+        except:
+            validPeak[a] = "corrupt Fits"
         else:
             validPeak[a] = False  
         ######## Adjust whats in between the ########################################
-        if os.path.isfile(f"{data_dir}/{folder_list[a]}/Analysis/imaging_analysis/analysis_results.json"):
-            json_path = Path(f"{data_dir}/{folder_list[a]}/Analysis/imaging_analysis/analysis_results.json")
-            try:
-                peakSig[a] = get_peaksig_json(json_path)
-            except:
-                print('no peak')
+        imager= events_imaging.BC_Imaging()
+        peaks = imager.imager.findpeaks(data) # Index 5 has the significance
+        if len(peaks) == 1: 
+            peakSig = peaks[5]
+        if len(peaks) == 2:
+            peakSig = peaks[0]
+            peakSig = peakSig[5]
         ###########################################################################
     result = {
         "xCenter" : xMean,
@@ -167,12 +169,12 @@ def analyze_localization_directory(data_dir,window=10,plot = False ):
         "ySigma" : ySigma,
         "peak" : Amplitude,
         "peakSig" : peakSig,
-        "theta" : theta,
-        'covMatrix' : cov
+        "theta" : theta
+        #'covMatrix' : cov
     }
 
     result = pd.DataFrame(result)
-    return result
+    return result, cov
 
 
 def analyze_localization(eventlistin ,window=10,plot = False ):
