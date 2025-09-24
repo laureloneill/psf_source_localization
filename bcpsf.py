@@ -238,15 +238,25 @@ def analyze_localization(eventlistin ,window=10,plot = False ):
     
     imager= events_imaging.BC_Imaging()
     peaks = imager.imager.findpeaks(data) # Index 5 has the significance
-    if len(peaks) == 1: 
-        try: 
-            peakSig = peaks[5]
-        except:
-            peaks = peaks[0]
-            peakSig = peaks[5]
-    if len(peaks) == 2:
-        peakSig = peaks[0]
-        peakSig = peakSig[5]
+    try:
+        f = [None]*len(peaks)
+        for a in range(len(peaks)):
+            f[a] = peaks[a][5]
+        peakSig = max(f)
+    except:
+        print("issue with finding peaks")
+        peakSig = None
+    #if len(peaks) == 1: 
+    #    try: 
+    #        peakSig = peaks[5]
+    #    except:
+    #        peaks = peaks[0]
+    #        peakSig = peaks[5]
+    #if len(peaks) == 2:
+    #    peakSig = peaks[0]
+    #    peakSig = peakSig[5]
+    #if len(peaks) == 0:
+    #    peakSig = np.nan
 
     result = {
         "xCenter" : xMean,
