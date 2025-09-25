@@ -68,6 +68,93 @@ def fit_rotated_2d_gaussian(data, x=None, y=None, plot_result=False,iter = None)
 
     return fitted_model,covariance_matrix
 
+def fit_circular_gaussian(data, x=None, y=None, plot_result=False,iter = None):
+    # Estimate initial parameters
+    amplitude_init = np.max(data)
+    x_mean_init = x[data == amplitude_init][0]
+    y_mean_init = y[data == amplitude_init][0]
+    
+    def tie_stddev(model):
+        return model.x_stddev
+    gauss_init = models.Gaussian2D(amplitude=amplitude_init, x_mean=x_mean_init, y_mean=y_mean_init,
+                           x_stddev=0.069, y_stddev=0.069, theta=0,
+                           tied={'y_stddev': tie_stddev})
+    gauss_init.theta.fixed = True  # Fix theta to 0 to prevent rotation
+
+    # Fit the model to the data
+    fitter = fitting.LevMarLSQFitter()
+    g_fit = fitter(gauss_init, x, y, data)
+    fitted_model = fitter(gauss_init, x, y, data)
+    covariance_matrix = fitter.fit_info['param_cov']
+    
+    if plot_result == True:
+        plt.figure(figsize=(10, 4))
+
+        plt.subplot(1, 2, 1)
+        plt.title('Original Data')
+        plt.imshow(data, origin='lower', interpolation='none', extent=[-5, 5, -5, 5])   
+        plt.colorbar()
+
+        plt.subplot(1, 2, 2)
+        plt.title('Fitted Circular Gaussian')
+        plt.imshow(g_fit(x, y), origin='lower', interpolation='none', extent=[-5, 5, -5, 5])
+        plt.colorbar()
+
+        plt.tight_layout()
+        plt.show()
+    
+    return fitted_model,covariance_matrix
+
+'''
+def fit_circular_gaussian(data, x=None, y=None, plot_result=False,iter = None):
+    ny, nx = data.shape
+    
+    # Estimate initial parameters
+    amplitude_init = np.max(data)
+    x_mean_init = x[data == amplitude_init][0]
+    y_mean_init = y[data == amplitude_init][0]
+    
+    def tie_stddev(model):
+        return model.x_stddev
+    gauss_init = models.Gaussian2D(amplitude=amplitude_init, x_mean=x_mean_init, y_mean=y_mean_init,
+                           x_stddev=0.069, y_stddev=0.069, theta=0,
+                           tied={'y_stddev': tie_stddev})
+
+    if x is None or y is None:
+        y, x = np.mgrid[:ny, :nx]
+    
+    def tie_stddev(model):
+        return model.x_stddev
+    gauss_init = models.Gaussian2D(amplitude=1, x_mean=0, y_mean=0,
+                           x_stddev=1, y_stddev=1, theta=0,
+                           tied={'y_stddev': tie_stddev})
+    gauss_init.theta.fixed = True  # Fix theta to 0 to prevent rotation
+
+    # Fit the model to the data
+    fitter = fitting.LevMarLSQFitter()
+    g_fit = fitter(gauss_init, x, y, data)
+    fitted_model = fitter(gauss_init, x, y, data)
+    covariance_matrix = fitter.fit_info['param_cov']
+    
+    if plot_result == True:
+        plt.figure(figsize=(10, 4))
+
+        plt.subplot(1, 2, 1)
+        plt.title('Original Data')
+        plt.imshow(data, origin='lower', interpolation='none', extent=[-5, 5, -5, 5])   
+        plt.colorbar()
+
+        plt.subplot(1, 2, 2)
+        plt.title('Fitted Circular Gaussian')
+        plt.imshow(g_fit(x, y), origin='lower', interpolation='none', extent=[-5, 5, -5, 5])
+        plt.colorbar()
+
+        plt.tight_layout()
+        plt.show()
+    
+    return fitted_model,covariance_matrix
+'''
+
 def distFromCentroid(observation,plotHist=False):
     # computes the centroid of a finite set of points, and returns the distance that each point is from that centroid
     # observation -> pandas data frame consisting of the data from fitting a gaussian 
@@ -187,7 +274,7 @@ def analyze_localization_directory(data_dir,window=10,plot = False ):
     return result, cov
 
 
-def analyze_localization(eventlistin ,window=10,plot = False ):
+def analyze_localization(eventlistin ,window=10,plot = False, rotated = True ):
     
     if type(eventlistin) == "str":
         eventlistin = fits.open(Path(eventlistin))
@@ -219,13 +306,15 @@ def analyze_localization(eventlistin ,window=10,plot = False ):
 
     peak = np.max(data)
     peak_loc = np.unravel_index(np.argmax(data),data.shape)
-    window = 10
+    window = window
 
     windowed_data = data[peak_loc[0]-window:peak_loc[0]+window, peak_loc[1]-window:peak_loc[1]+window]
     x_window = x[peak_loc[0]-window:peak_loc[0]+window, peak_loc[1]-window:peak_loc[1]+window]
     y_window = y[peak_loc[0]-window:peak_loc[0]+window, peak_loc[1]-window:peak_loc[1]+window]
-
-    fitted,covariance_matrix = fit_rotated_2d_gaussian(windowed_data, x_window, y_window, plot_result=plot)
+    if rotated == True:
+        fitted,covariance_matrix = fit_rotated_2d_gaussian(windowed_data, x_window, y_window, plot_result=plot)
+    else: 
+        fitted,covariance_matrix = fit_circular_gaussian(windowed_data, x_window, y_window, plot_result=plot)
 
     validPeak = True
     xMean = fitted.x_mean.value
@@ -237,7 +326,7 @@ def analyze_localization(eventlistin ,window=10,plot = False ):
     cov = covariance_matrix
     
     imager= events_imaging.BC_Imaging()
-    peaks = imager.imager.findpeaks(data) # Index 5 has the significance
+    peaks = imager.imager.findpeaks(data,minsigma=5.0) # Index 5 has the significance
     try:
         f = [None]*len(peaks)
         for a in range(len(peaks)):
@@ -267,6 +356,64 @@ def analyze_localization(eventlistin ,window=10,plot = False ):
         "peakSig" : peakSig,
         "theta" : theta
     }
+
+    #result = pd.DataFrame(result)
+    return result,cov
+
+
+def circle_localization(eventlistin,window, plot_result = False):
+    eventlistin = fits.open(Path(eventlistin))
+    data = eventlistin[0].data
+
+    ny, nx = data.shape
+    ym, xm = np.mgrid[:ny, :nx]
+
+    w = WCS(eventlistin[0].header)
+
+    x,y= w.array_index_to_world_values(ym,xm)
+    x = (x+(180+360)) % 360 -180
+
+    peak = np.max(data)
+    peak_loc = np.unravel_index(np.argmax(data),data.shape)
+    window = window
+
+    windowed_data = data[peak_loc[0]-window:peak_loc[0]+window, peak_loc[1]-window:peak_loc[1]+window]
+    x_window = x[peak_loc[0]-window:peak_loc[0]+window, peak_loc[1]-window:peak_loc[1]+window]
+    y_window = y[peak_loc[0]-window:peak_loc[0]+window, peak_loc[1]-window:peak_loc[1]+window]
+
+    fitted,covariance_matrix = fit_circular_gaussian(windowed_data, x_window, y_window, plot_result)
+
+    #aError, xMean_error, yMean_error, Sigma_error = np.sqrt(np.diag(covariance_matrix))
+
+    validPeak = True
+    xMean = fitted.x_mean.value
+    yMean = fitted.y_mean.value
+    xSigma = fitted.x_stddev.value
+    ySigma = fitted.y_stddev.value
+    Amplitude = fitted.amplitude.value
+    theta =fitted.theta.value
+    cov = covariance_matrix
+    
+    imager= events_imaging.BC_Imaging()
+    peaks = imager.imager.findpeaks(data,minsigma=5.0) # Index 5 has the significance
+    try:
+        f = [None]*len(peaks)
+        for a in range(len(peaks)):
+            f[a] = peaks[a][5]
+        peakSig = max(f)
+    except:
+        print("issue with finding peaks")
+        peakSig = None
+
+    result = {
+            "xCenter" : xMean,
+            "yCenter" : yMean,
+            "xSigma" : xSigma,
+            "ySigma" : ySigma,
+            "peak" : Amplitude,
+            "peakSig" : peakSig,
+            "theta" : theta
+        }
 
     #result = pd.DataFrame(result)
     return result,cov
